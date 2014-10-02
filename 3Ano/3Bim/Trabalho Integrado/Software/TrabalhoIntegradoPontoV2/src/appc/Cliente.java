@@ -28,7 +28,7 @@ import net.impl.SecureTCPClient;
 public class Cliente implements MessageListener {
 	
 	private static TCPClient tcpClient;
-	// / pega a lista de portas serial
+	//pega a lista de portas serial
 	static Enumeration<?> listaDePortas = CommPortIdentifier
 			.getPortIdentifiers();
 	static JComboBox<String> lstPortas = new JComboBox<>();
