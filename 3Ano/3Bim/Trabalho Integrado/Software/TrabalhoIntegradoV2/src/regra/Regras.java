@@ -142,6 +142,7 @@ public class Regras implements Observer {
 			} else {
 				auto = true;
 				status = "Modo automatico ativo";
+				servidor.sendMessege(IDRegras.BIN_A_OFF);
 				user.guardaComm(IDRegras.VIA_A_OFF, IDRegras.BIN_A_OFF);
 			}
 		} else if (regra.equals("VIA B=OFF")) {
@@ -154,6 +155,7 @@ public class Regras implements Observer {
 			} else {
 				auto = true;
 				status = "Modo automatico ativo";
+				servidor.sendMessege(IDRegras.BIN_B_OFF);
 				user.guardaComm(IDRegras.VIA_B_OFF, IDRegras.BIN_B_OFF);
 			}
 		}

@@ -47,7 +47,7 @@ public class Cliente implements MessageListener {
 	}
 
 	public void start() {
-		//inicia o cliente
+		//inicia o cliente//
 		tcpClient.start();
 		//pega a porta e o baud e cria uma conexão serial e inicia;
 		String com = lstPortas.getSelectedItem().toString();

@@ -26,11 +26,11 @@ public interface IDRegras {
 	String BIN_NO_PREF     = "1011";
 	String BIN_A_ON        = "1100";
 	String BIN_B_ON        = "1101";
-	String BIN_A_OFF       = "";
-	String BIN_B_OFF       = "";
+	String BIN_A_OFF       = "1011";
+	String BIN_B_OFF       = "1011";
 	String BIN_STANDBY     = "1110";
 	String BIN_ATIVO       = "1110";
-	String BIN_INATIVO     = "0110";
+	String BIN_INATIVO     = "0000";
 	String BIN_ATTRIB_X1   = "";
 	String BIN_ATTRIB_Y1   = "";
 	String BIN_ADD_OP      = "";

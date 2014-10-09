@@ -29,7 +29,7 @@ public class Supervisor {
 			servidor = new Servidor(conexao);
 		} catch (Exception e) {
 			JOptionPane.showMessageDialog(null, 
-					"Falha ao tentar criar o servidor: " + e.getMessage(), 
+					"Falha ao criar o servidor: " + e.getMessage(), 
 					"Falha", 
 					JOptionPane.ERROR_MESSAGE);
 		}
