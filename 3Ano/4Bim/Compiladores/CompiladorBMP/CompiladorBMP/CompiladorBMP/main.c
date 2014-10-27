@@ -13,6 +13,25 @@
 #include <termios.h>
 #include <unistd.h>
 #include <ncurses.h>
+#include <math.h>
+
+unsigned char byte0;
+unsigned char byte1;
+unsigned char byte2;
+unsigned char byte3;
+int debug = 0;
+int delay = 0;
+
+void separaEmBytes(int valor){
+ 
+    byte0 = (valor & 255);
+    byte1 = ((valor >> 8) & 255);
+    byte2 = ((valor >> 16) & 255);
+    byte3 = ((valor >> 24) & 255);
+    if (debug) printf("\e[7;36m%08d\e[0;36m convertido em: \e[7;36m%02x.%02x.%02x.%02x\e[0;36m.\e[0m\n\n"
+                      , valor, byte3, byte2, byte1, byte0);
+    usleep(delay);
+}
 
 int main(int argc, const char * argv[]) {
     
@@ -28,18 +47,36 @@ int main(int argc, const char * argv[]) {
     char filePath[200] = "~/Teste/teste.bmp";
     int fileSize = 50;
     char aux = '\0';
-    char aux0 = '\0';
-    char aux1 = '\0';
-    int qtddColunas = 0;
-    int qtddLinhas = 0;
+    int reservado = 0;
+    int deslocamento = 54;
+    int resto = 0;
+    int planos = 3;
+    int bitsPixel = 24;
+    int compressao = 0;
+    int tamanho = 0;
+    int pixelsHorizontal = 0;
+    int pixelsVertical = 0;
     
     
     if (argc != 1) { // Se tiver argumentos...
-        if (strcmp(argv[2], "?") || strcmp(argv[2], "help")) printf("This is a BMP image file Compiler.");
+        
+        
+        if (argc == 2) {
+            if (strcmp(argv[1], "?") || strcmp(argv[1], "help")) printf("\n\n\e[36mThis is a BMP image file Compiler.\e[0m\n\n\n");
+            return 0;
+        }
+        if (argc == 3) {
+            if ((strcmp(argv[1], "-d") || strcmp(argv[1], "--debug") || strcmp(argv[1], "--DEBUG")) && (strcmp(argv[2], "0") || strcmp(argv[2] ,"1"))) {
+                debug = atoi(argv[2]);
+                printf("Debug habilitado! Debug: %d\n\n", debug);
+            } else {
+                printf("\e[31mErro na passagem de parâmetros. Ignorando...\e[0m\n\n");
+            }
+        }
     }
     
     system("clear");
-    printf("\e[34mDigite um commando ou digite \"?\" para listar opções.\e[0m");
+    printf("\e[36mDigite um commando ou digite \"?\" para listar opções.\e[0m");
 
     while (1)
     {
@@ -87,13 +124,61 @@ int main(int argc, const char * argv[]) {
                 }
                 
                 imgCriada = 1;
-                printf("Criando cabeçalho.\n");
                 tamX = comando1;
                 tamY = comando2;
                 
-                printf("Criando imagem de tamanho %dx%d.\e[0m\n", comando1, comando2);
-                printf("tamX: %d, tamY: %d.\n", tamX, tamY);
-                printf("comando1: %d, comando2: %d.\n", comando1, comando2);
+                // DELAY TIME
+                delay = (4000000/(2*tamX*tamY));
+                if (delay == 0) {
+                    delay = 10;
+                }
+                
+                
+                
+                // ------- CABEÇALHO --------
+                
+                // Filesize
+                if (((tamX*qtddCores)%4) != 0) {            // Se não for múltiplo de 4...
+                    fileSize = 4;                           // Adiciona o stuffing bits
+                }
+                fileSize += 54;                             // Bytes de cabeçalho
+                fileSize += tamY*(((tamX*qtddCores)/4)*4);  // Bytes de bitmap
+                
+                // Reserved
+                reservado = 0;
+                
+                // Deslocamento
+                deslocamento = 54;
+                
+                // Resto
+                resto = 6;
+                
+                // Planos
+                planos = qtddCores;
+                
+                // Bits por Pixel (4 bytes)
+                bitsPixel = 24;
+                
+                // Compressão (Sem compressão)
+                compressao = 0;
+                
+                // Tamanho
+                tamanho = tamX*tamY;
+                
+                // Pixels/m na Horizontal
+                pixelsHorizontal = 0;
+                
+                // Pixels/m na Vertical
+                pixelsVertical = 0;
+                
+                
+                if (debug)
+                {
+                    printf("Criando cabeçalho.\n");
+                    printf("Criando imagem de tamanho %dx%d.\e[0m\n", comando1, comando2);
+                    printf("tamX: %d, tamY: %d.\n", tamX, tamY);
+                    printf("comando1: %d, comando2: %d.\n", comando1, comando2);
+                }
                 
                 // Aloca vetor tridimensional
                 bitmap = (unsigned char***) malloc(tamX*sizeof(unsigned char*)); // Aloca vetor com quantidade colunas
@@ -143,7 +228,11 @@ int main(int argc, const char * argv[]) {
                 
                 for (int j = 0; j < tamY; j++) {                // Colunas
                     for (int i = 0; i < tamX; i++) {            // Linhas
-                        printf("i: %d, j: %d. (%d,%d,%d)\n", i, j, comando1, comando2, comando3);
+                        if (debug) {
+                            printf("i: %03d, j: %03d. (\e[31m%03d\e[0m,\e[32m%03d\e[0m,\e[34m%03d\e[0m)\n",
+                                   i, j, comando1, comando2, comando3);
+                            usleep(delay);
+                        }
                         bitmap[i][j][0] = (unsigned char)comando3;       // Azul.
                         bitmap[i][j][1] = (unsigned char)comando2;       // Verde.
                         bitmap[i][j][2] = (unsigned char)comando1;       // Vermelho.
@@ -250,38 +339,91 @@ int main(int argc, const char * argv[]) {
                 
                 sleep(1);
 
+                // --- CABEÇALHO --- //
                 fwrite("BM", 1, 2 ,fp);                 // 00-01 type
-                fwrite("\0\0\0\0", 1, 4, fp);           // 02-05 size
-                fwrite("\0\0", 1, 2, fp);               // 06-07 zeros
-                fwrite("\0\0", 1, 2, fp);               // 08-09 zeros
-                fwrite("\0\0\0T", 1, 4, fp);            // 10-13 deslocamento até imagem
-                fwrite("\0\0\0\0", 1, 4, fp);           // 14-17 resto do bloco de controle
-                aux1 = tamX;
-                fwrite("\0\0\0", 1, 3, fp);             // 18-20 numero de colunas1
-                fwrite(&aux1, 1, 1, fp);                // 21 numero de colunas2
-                aux1 = tamY;
-                fwrite("\0\0\0", 1, 3, fp);             // 22 numero de linhas
-                fwrite(&aux1, 1, 2, fp);                // 25 numero de linhas
-                aux1 = 3;
-                fwrite("\0", 1, 1, fp);                 // 26 planos
-                fwrite(&aux1, 1, 1, fp);                // 27 planos
-                aux1 = 24;
-                fwrite("\0\0\0", 1, 3, fp);             // 28-30 bits/pixel
-                fwrite(&aux1, 1, 2, fp);                // 31 bits/pixel
                 
-                fwrite("\0\0\0\0", 1, 4, fp);           // 32-35 compressao
+                separaEmBytes(fileSize);
+                fwrite(&byte3, 1, 1, fp);               // 02 size
+                fwrite(&byte2, 1, 1, fp);               // 03 size
+                fwrite(&byte1, 1, 1, fp);               // 04 size
+                fwrite(&byte0, 1, 1, fp);               // 05 size
                 
-                fwrite("\0\0\0\0", 1, 4, fp);           // 36-39 tamanho da imagem
-                fwrite("\0\0\0\0", 1, 4, fp);           // 40-43 pixels/m na horizontal
-                fwrite("\0\0\0\0", 1, 4, fp);           // 40-43 pixels/m na vertical
-                fwrite("\0\0\0\0\0\0", 1, 6, fp);       // 48-54 restando até 54 bytes
+                separaEmBytes(reservado);
+                fwrite(&byte3, 1, 1, fp);               // 06 zeros
+                fwrite(&byte2, 1, 1, fp);               // 07 zeros
+                fwrite(&byte1, 1, 1, fp);               // 08 zeros
+                fwrite(&byte0, 1, 1, fp);               // 09 zeros
+                
+                separaEmBytes(deslocamento);
+                fwrite(&byte3, 1, 1, fp);               // 10 deslocamento até imagem
+                fwrite(&byte2, 1, 1, fp);               // 11 deslocamento até imagem
+                fwrite(&byte1, 1, 1, fp);               // 12 deslocamento até imagem
+                fwrite(&byte0, 1, 1, fp);               // 13 deslocamento até imagem
+                
+                separaEmBytes(resto);
+                fwrite(&byte3, 1, 1, fp);               // 14 resto do bloco de controle
+                fwrite(&byte2, 1, 1, fp);               // 15 resto do bloco de controle
+                fwrite(&byte1, 1, 1, fp);               // 16 resto do bloco de controle
+                fwrite(&byte0, 1, 1, fp);               // 17 resto do bloco de controle
+                
+                separaEmBytes(tamX);
+                fwrite(&byte3, 1, 1, fp);               // 18 numero de colunas
+                fwrite(&byte2, 1, 1, fp);               // 19 numero de colunas
+                fwrite(&byte1, 1, 1, fp);               // 20 numero de colunas
+                fwrite(&byte0, 1, 1, fp);               // 21 numero de colunas
+                
+                separaEmBytes(tamY);
+                fwrite(&byte3, 1, 1, fp);               // 22 numero de linhas
+                fwrite(&byte2, 1, 1, fp);               // 23 numero de linhas
+                fwrite(&byte1, 1, 1, fp);               // 24 numero de linhas
+                fwrite(&byte0, 1, 1, fp);               // 25 numero de linhas
+                
+                separaEmBytes(planos);
+                fwrite(&byte0, 1, 1, fp);               // 26 planos
+                fwrite(&byte1, 1, 1, fp);               // 27 planos
+                
+                separaEmBytes(bitsPixel);
+                fwrite(&byte3, 1, 1, fp);               // 28 bits/pixel
+                fwrite(&byte1, 1, 1, fp);               // 29 bits/pixel
+                fwrite(&byte3, 1, 1, fp);               // 30 bits/pixel
+                fwrite(&byte1, 1, 1, fp);               // 31 bits/pixel
+                
+                separaEmBytes(compressao);
+                fwrite(&byte3, 1, 1, fp);               // 32 compressao
+                fwrite(&byte2, 1, 1, fp);               // 33 compressao
+                fwrite(&byte1, 1, 1, fp);               // 34 compressao
+                fwrite(&byte0, 1, 1, fp);               // 35 compressao
+                
+                separaEmBytes(tamanho);
+                fwrite(&byte3, 1, 1, fp);               // 36 tamanho da imagem
+                fwrite(&byte2, 1, 1, fp);               // 37 tamanho da imagem
+                fwrite(&byte1, 1, 1, fp);               // 38 tamanho da imagem
+                fwrite(&byte0, 1, 1, fp);               // 39 tamanho da imagem
+                
+                separaEmBytes(pixelsHorizontal);
+                fwrite(&byte3, 1, 1, fp);               // 40 pixels/m na horizontal
+                fwrite(&byte2, 1, 1, fp);               // 41 pixels/m na horizontal
+                fwrite(&byte1, 1, 1, fp);               // 42 pixels/m na horizontal
+                fwrite(&byte0, 1, 1, fp);               // 43 pixels/m na horizontal
+                
+                separaEmBytes(pixelsVertical);
+                fwrite(&byte3, 1, 1, fp);               // 44 pixels/m na vertical
+                fwrite(&byte2, 1, 1, fp);               // 45 pixels/m na vertical
+                fwrite(&byte1, 1, 1, fp);               // 46 pixels/m na vertical
+                fwrite(&byte0, 1, 1, fp);               // 47 pixels/m na vertical
+                
+                fwrite("\0\0\0\0\0\0", 1, 6, fp);       // 48-53 restando até 53 bytes
+                
                 
                 // PRINT BITMAP ON FILE
                 
                 for (int j = 0; j < tamY; j++) {                // Colunas
                     for (int i = 0; i < tamX; i++) {            // Linhas
-                        printf("i: %d, j: %d. (%d,%d,%d)\n", i, j, bitmap[i][j][2], bitmap[i][j][1], bitmap[i][j][0]);
-                        aux = bitmap[i][j][0];
+                        if (debug) {
+                            printf("i: %03d, j: %03d. (\e[31m%03d\e[0m,\e[32m%03d\e[0m,\e[34m%03d\e[0m)\n", i, j, bitmap[i][j][2], bitmap[i][j][1], bitmap[i][j][0]);
+                            usleep(delay);
+                        }
+                            aux = bitmap[i][j][0];
                         fwrite(&aux, 1, 1, fp);
                         aux = bitmap[i][j][1];
                         fwrite(&aux, 1, 1, fp);
@@ -304,12 +446,37 @@ int main(int argc, const char * argv[]) {
                 break;
                 
             case '?':
-                printf("Ajuda:\e[0m\n");
-                sleep(1);
+                printf("   \e[36mAJUDA:\e[0m\n");
+                printf("\t\e[36mCRIAR NOVA IMAGEM:\n");
+                printf("\t  \e[36mC <largura> <altura>\n\n");
+                
+                printf("\t\e[36mPREENCHER IMAGEM:\n");
+                printf("\t\e[36m  L <\e[31mvermelho 0-255\e[36m> <\e[32mverde 0-255\e[36m> <\e[34mazul 0-255\e[36m>\n\n");
+                
+                printf("\t\e[36mCRIAR RETÂNGULO:\n");
+                printf("\t\e[36m  R <X1> <Y1> <X2> <Y2> <\e[31mvermelho 0-255\e[36m> <\e[32mverde 0-255\e[36m> <\e[34mazul 0-255\e[36m>\n\n");
+                
+                printf("\t\e[36mCRIAR CÍRCULO:\n");
+                printf("\t\e[36m  B <centro X> <centro Y> <raio> <\e[31mvermelho 0-255\e[36m> <\e[32mverde 0-255\e[36m> <\e[34mazul 0-255\e[36m>\n\n");
+                
+                
+                printf("\t\e[36mPINTAR PIXEL:\n");
+                printf("\t\e[36m  P <pixel X> <pixel Y> <\e[31mvermelho 0-255\e[36m> <\e[32mverde 0-255\e[36m> <\e[34mazul 0-255\e[36m>\n\n");
+                
+                printf("\t\e[36mSALVAR IMAGEM:\n");
+                printf("\t\e[36m  S <caminho do arquivo.bmp>\e[36m\n");
+                printf("\t\e[36m  S - Salva no diretório atual.\e[36m\n\n");
+                
+                printf("\t\e[36mFINALIZAR PROGRAMA:\e[36m\n");
+                printf("\t\e[36m  X\e[0m\n");
+                
+                
+                fgets(&aux, 2, stdin);
+                memset(entrada,'\0', 200);
                 break;
                 
             default:
-                printf("Comando inválido. Digite novamente.\e[0m\n");
+                printf("\e[33mComando inválido. Digite novamente.\e[0m\n");
                 sleep(1);
                 break;
         }
