@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
+	<false/>
+	<key>IDESourceControlProjectIdentifier</key>
+	<string>E4F0B4B7-38AA-4BA9-AF3B-557CD552DFAC</string>
+	<key>IDESourceControlProjectName</key>
+	<string>CompiladorBMP</string>
+	<key>IDESourceControlProjectOriginsDictionary</key>
+	<dict>
+		<key>72F4122676169D14CB87FDCA4E7415C03DDF4B25</key>
+		<string>https://github.com/thomazfilipe/EngComp.git</string>
+	</dict>
+	<key>IDESourceControlProjectPath</key>
+	<string>3Ano/4Bim/Compiladores/CompiladorBMP/CompiladorBMP/CompiladorBMP.xcodeproj</string>
+	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
+	<dict>
+		<key>72F4122676169D14CB87FDCA4E7415C03DDF4B25</key>
+		<string>../../../../../../..</string>
+	</dict>
+	<key>IDESourceControlProjectURL</key>
+	<string>https://github.com/thomazfilipe/EngComp.git</string>
+	<key>IDESourceControlProjectVersion</key>
+	<integer>111</integer>
+	<key>IDESourceControlProjectWCCIdentifier</key>
+	<string>72F4122676169D14CB87FDCA4E7415C03DDF4B25</string>
+	<key>IDESourceControlProjectWCConfigurations</key>
+	<array>
+		<dict>
+			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
+			<string>public.vcs.git</string>
+			<key>IDESourceControlWCCIdentifierKey</key>
+			<string>72F4122676169D14CB87FDCA4E7415C03DDF4B25</string>
+			<key>IDESourceControlWCCName</key>
+			<string>Teste</string>
+		</dict>
+	</array>
+</dict>
+</plist>
