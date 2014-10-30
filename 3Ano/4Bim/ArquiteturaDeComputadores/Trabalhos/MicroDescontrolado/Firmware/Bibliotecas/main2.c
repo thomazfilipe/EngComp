@@ -18,6 +18,8 @@
 #include <p18f4550.h>
 #include <adc.h>
 #include <string.h>
+#include <i2c.h>
+
 
 
 /** C O N F I G U R A Ç Õ E S  ***********************************************/
@@ -37,6 +39,12 @@
 #pragma config LPT1OSC  = ON        // Opera em modo de baixo consumo.
 
 
+#define BOOL int
+#define true 1
+#define false 0
+#define escrita 0xFE
+#define leitura 0x00;
+
 /** V A R I Á V E I S ********************************************************/
 #pragma udata
 char aux[64];
@@ -51,6 +59,46 @@ unsigned int contadorINT2 = 0;
 void HighPriorityISRCode();
 void LowPriorityISRCode();
 void USBCBSendResume(void);
+
+//** F U N Ç Õ E S ***********************************************************/
+BOOL escreve_I2C(unsigned char mensagem[], int tamanho, unsigned char endereco){
+    IdleI2C();                          // Aguarda pelo Barramento.
+    StartI2C();                         // Solicita o inÌcio da comunicaÁ„o.
+    while(SSPCON2bits.SEN);             // Aguarda a resoluÁ„o do Start.
+    IdleI2C();
+
+    if(WriteI2C(endereco & escrita))    // Envia endereÁo e Write
+        return false;                   // Retorna como sucesso.
+
+    IdleI2C();
+    tamanho--;
+    while(tamanho >= 0){
+        if(WriteI2C(mensagem[tamanho--]))
+            return false;
+        IdleI2C();
+    }
+    StopI2C();
+    return true;
+}
+
+unsigned char ler_I2C(unsigned char endereco){
+    unsigned char dado;
+
+    IdleI2C();
+    StartI2C();
+    while(SSPCON2bits.SEN);
+    IdleI2C();
+    if(WriteI2C(endereco | 0x01)) // Define o endereÁo e Read.
+        return false;
+    IdleI2C();
+    dado = ReadI2C();
+    NotAckI2C();
+    StopI2C();
+
+    return dado;
+}
+
+
 
 /** I N T E R R U P Ç Õ E S *************************************************/
 #define REMAPPED_HIVAddress 0x1008  // End. remapeado p/ interrupt de Alta Prioridade (desl. 1000 pos.).
@@ -163,6 +211,14 @@ void main(void)
 
     ADCON1 |= 0x0F;         // Default all pins to digital
 
+    TRISC = 0x01;       // Define SCL como saída e SDA como entrada. (I2C)
+
+    /* CONFIGURAÇÕES I2C */
+    OpenI2C(MASTER,     // Define como Master
+            SLEW_OFF,); // Define como 100KHz ou 1MHz.
+    SSPADD = 49;        // (50 - 1).
+
+
     USBDeviceInit();
 
     // TIMER2
@@ -212,27 +268,7 @@ void main(void)
     memset(recebido, '\0', 64);
     while(1)
     {
-        ClrWdt();                     // Clear WDT counters.
-        if(programa[0] == '1'){
-            LATAbits.LATA0 = 1;     // Define nível lógico 1.
-        } else {
-            LATAbits.LATA0 = 0;     // Define nível lógico 0.
-        }
-        if(programa[1] == '1'){
-            LATAbits.LATA1 = 1;     // Define nível lógico 1.
-        } else {
-            LATAbits.LATA1 = 0;     // Define nível lógico 0.
-        }
-        if(programa[2] == '1'){
-            LATAbits.LATA2 = 1;     // Define nível lógico 1.
-        } else {
-            LATAbits.LATA2 = 0;     // Define nível lógico 0.
-        }
-        if(programa[3] == '1'){
-            LATAbits.LATA3 = 1;     // Define nível lógico 1.
-        } else {
-            LATAbits.LATA3 = 0;     // Define nível lógico 0.
-        }
+        ClrWdt();
 
         if(USB_BUS_SENSE && (USBGetDeviceState() == DETACHED_STATE)) // Se estiver desconectado...
             USBDeviceAttach(); // Conecta.
