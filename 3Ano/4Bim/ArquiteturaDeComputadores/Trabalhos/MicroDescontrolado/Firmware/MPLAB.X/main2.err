@@ -1,5 +1,4 @@
-Warning[2066] ../Bibliotecas/main2.c 102 : type qualifier mismatch in assignment
-Warning[2066] ../Bibliotecas/main2.c 112 : type qualifier mismatch in assignment
-Warning[2066] ../Bibliotecas/main2.c 130 : type qualifier mismatch in assignment
-Warning[2054] ../Bibliotecas/main2.c 249 : suspicious pointer conversion
-Warning[2066] ../Bibliotecas/main2.c 252 : type qualifier mismatch in assignment
+Warning[2066] ../Bibliotecas/main2.c 285 : type qualifier mismatch in assignment
+Warning[2066] ../Bibliotecas/main2.c 309 : type qualifier mismatch in assignment
+Warning[2066] ../Bibliotecas/main2.c 316 : type qualifier mismatch in assignment
+Warning[2066] ../Bibliotecas/main2.c 331 : type qualifier mismatch in assignment

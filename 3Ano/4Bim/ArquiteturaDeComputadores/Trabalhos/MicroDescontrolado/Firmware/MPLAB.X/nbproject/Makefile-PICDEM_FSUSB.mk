@@ -79,7 +79,7 @@ endif
 
 MP_PROCESSOR_OPTION=18F4550
 MP_PROCESSOR_OPTION_LD=18f4550
-MP_LINKER_DEBUG_OPTION= -u_DEBUGCODESTART=0x7dc0 -u_DEBUGCODELEN=0x240 -u_DEBUGDATASTART=0x3f4 -u_DEBUGDATALEN=0xb
+MP_LINKER_DEBUG_OPTION=
 # ------------------------------------------------------------------------------------
 # Rules for buildStep: assemble
 ifeq ($(TYPE_IMAGE), DEBUG_RUN)
@@ -93,7 +93,7 @@ ${OBJECTDIR}/_ext/2075391102/usb_device.o: ../Bibliotecas/usb_device.c  nbprojec
 	@${MKDIR} ${OBJECTDIR}/_ext/2075391102 
 	@${RM} ${OBJECTDIR}/_ext/2075391102/usb_device.o.d 
 	@${RM} ${OBJECTDIR}/_ext/2075391102/usb_device.o 
-	${MP_CC} $(MP_EXTRA_CC_PRE) -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -p$(MP_PROCESSOR_OPTION) -I"../Bibliotecas" -I"../" -ms -oa-  -I ${MP_CC_DIR}/../h  -fo ${OBJECTDIR}/_ext/2075391102/usb_device.o   ../Bibliotecas/usb_device.c 
+	${MP_CC} $(MP_EXTRA_CC_PRE) -D__DEBUG  -p$(MP_PROCESSOR_OPTION) -I"../Bibliotecas" -I"../" -ms -oa-  -I ${MP_CC_DIR}/../h  -fo ${OBJECTDIR}/_ext/2075391102/usb_device.o   ../Bibliotecas/usb_device.c 
 	@${DEP_GEN} -d ${OBJECTDIR}/_ext/2075391102/usb_device.o 
 	@${FIXDEPS} "${OBJECTDIR}/_ext/2075391102/usb_device.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c18 
 	
@@ -101,7 +101,7 @@ ${OBJECTDIR}/_ext/2075391102/usb_function_cdc.o: ../Bibliotecas/usb_function_cdc
 	@${MKDIR} ${OBJECTDIR}/_ext/2075391102 
 	@${RM} ${OBJECTDIR}/_ext/2075391102/usb_function_cdc.o.d 
 	@${RM} ${OBJECTDIR}/_ext/2075391102/usb_function_cdc.o 
-	${MP_CC} $(MP_EXTRA_CC_PRE) -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -p$(MP_PROCESSOR_OPTION) -I"../Bibliotecas" -I"../" -ms -oa-  -I ${MP_CC_DIR}/../h  -fo ${OBJECTDIR}/_ext/2075391102/usb_function_cdc.o   ../Bibliotecas/usb_function_cdc.c 
+	${MP_CC} $(MP_EXTRA_CC_PRE) -D__DEBUG  -p$(MP_PROCESSOR_OPTION) -I"../Bibliotecas" -I"../" -ms -oa-  -I ${MP_CC_DIR}/../h  -fo ${OBJECTDIR}/_ext/2075391102/usb_function_cdc.o   ../Bibliotecas/usb_function_cdc.c 
 	@${DEP_GEN} -d ${OBJECTDIR}/_ext/2075391102/usb_function_cdc.o 
 	@${FIXDEPS} "${OBJECTDIR}/_ext/2075391102/usb_function_cdc.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c18 
 	
@@ -109,7 +109,7 @@ ${OBJECTDIR}/_ext/1472/usb_descriptors.o: ../usb_descriptors.c  nbproject/Makefi
 	@${MKDIR} ${OBJECTDIR}/_ext/1472 
 	@${RM} ${OBJECTDIR}/_ext/1472/usb_descriptors.o.d 
 	@${RM} ${OBJECTDIR}/_ext/1472/usb_descriptors.o 
-	${MP_CC} $(MP_EXTRA_CC_PRE) -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -p$(MP_PROCESSOR_OPTION) -I"../Bibliotecas" -I"../" -ms -oa-  -I ${MP_CC_DIR}/../h  -fo ${OBJECTDIR}/_ext/1472/usb_descriptors.o   ../usb_descriptors.c 
+	${MP_CC} $(MP_EXTRA_CC_PRE) -D__DEBUG  -p$(MP_PROCESSOR_OPTION) -I"../Bibliotecas" -I"../" -ms -oa-  -I ${MP_CC_DIR}/../h  -fo ${OBJECTDIR}/_ext/1472/usb_descriptors.o   ../usb_descriptors.c 
 	@${DEP_GEN} -d ${OBJECTDIR}/_ext/1472/usb_descriptors.o 
 	@${FIXDEPS} "${OBJECTDIR}/_ext/1472/usb_descriptors.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c18 
 	
@@ -117,7 +117,7 @@ ${OBJECTDIR}/_ext/2075391102/main2.o: ../Bibliotecas/main2.c  nbproject/Makefile
 	@${MKDIR} ${OBJECTDIR}/_ext/2075391102 
 	@${RM} ${OBJECTDIR}/_ext/2075391102/main2.o.d 
 	@${RM} ${OBJECTDIR}/_ext/2075391102/main2.o 
-	${MP_CC} $(MP_EXTRA_CC_PRE) -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -p$(MP_PROCESSOR_OPTION) -I"../Bibliotecas" -I"../" -ms -oa-  -I ${MP_CC_DIR}/../h  -fo ${OBJECTDIR}/_ext/2075391102/main2.o   ../Bibliotecas/main2.c 
+	${MP_CC} $(MP_EXTRA_CC_PRE) -D__DEBUG  -p$(MP_PROCESSOR_OPTION) -I"../Bibliotecas" -I"../" -ms -oa-  -I ${MP_CC_DIR}/../h  -fo ${OBJECTDIR}/_ext/2075391102/main2.o   ../Bibliotecas/main2.c 
 	@${DEP_GEN} -d ${OBJECTDIR}/_ext/2075391102/main2.o 
 	@${FIXDEPS} "${OBJECTDIR}/_ext/2075391102/main2.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c18 
 	
@@ -161,7 +161,7 @@ endif
 ifeq ($(TYPE_IMAGE), DEBUG_RUN)
 dist/${CND_CONF}/${IMAGE_TYPE}/MPLAB.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX}: ${OBJECTFILES}  nbproject/Makefile-${CND_CONF}.mk    ../rm18f4550\ -\ HID\ Bootload.lkr
 	@${MKDIR} dist/${CND_CONF}/${IMAGE_TYPE} 
-	${MP_LD} $(MP_EXTRA_LD_PRE) "../rm18f4550 - HID Bootload.lkr"  -p$(MP_PROCESSOR_OPTION_LD)  -w -x -u_DEBUG -m"${DISTDIR}/${PROJECTNAME}.${IMAGE_TYPE}.map"  -z__MPLAB_BUILD=1  -u_CRUNTIME -z__MPLAB_DEBUG=1 -z__MPLAB_DEBUGGER_PK3=1 $(MP_LINKER_DEBUG_OPTION) -l ${MP_CC_DIR}/../lib  -o dist/${CND_CONF}/${IMAGE_TYPE}/MPLAB.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX}  ${OBJECTFILES_QUOTED_IF_SPACED}   
+	${MP_LD} $(MP_EXTRA_LD_PRE) "../rm18f4550 - HID Bootload.lkr"  -p$(MP_PROCESSOR_OPTION_LD)  -w -x -u_DEBUG -m"${DISTDIR}/${PROJECTNAME}.${IMAGE_TYPE}.map"  -z__MPLAB_BUILD=1  -u_CRUNTIME -z__MPLAB_DEBUG=1 $(MP_LINKER_DEBUG_OPTION) -l ${MP_CC_DIR}/../lib  -o dist/${CND_CONF}/${IMAGE_TYPE}/MPLAB.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX}  ${OBJECTFILES_QUOTED_IF_SPACED}   
 else
 dist/${CND_CONF}/${IMAGE_TYPE}/MPLAB.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX}: ${OBJECTFILES}  nbproject/Makefile-${CND_CONF}.mk   ../rm18f4550\ -\ HID\ Bootload.lkr
 	@${MKDIR} dist/${CND_CONF}/${IMAGE_TYPE} 

@@ -3,7 +3,6 @@
 #define USB_BUS_SENSE       1   // Se tiver tensão no USB, trata a interrupção do USB.
 #define CLOCK_FREQ 48000000     // Freq. p/ biblioteca.
 
-
 /** I N C L U D E S **********************************************************/
 #include "./USB/usb.h"
 #include "./USB/usb_function_cdc.h"
@@ -28,7 +27,7 @@
 #pragma config USBDIV   = 2         // Clock source from 96MHz PLL/2
 #pragma config FOSC     = HSPLL_HS  // Gera os 48MHz
 #pragma config WDT      = ON        // Watchdog Timer
-#pragma config WDTPS    = 512       // Período do WDT em 512ms
+#pragma config WDTPS    = 32768     // Período do WDT em 512ms
 #pragma config BOR      = ON
 #pragma config BORV     = 3         // Reseta se a tensão for menor que 3v.
 #pragma config VREGEN   = ON        //USB Voltage Regulator
@@ -38,21 +37,30 @@
 #pragma config LVP      = OFF       // Desabilita modo de programação de baixa tensão.
 #pragma config LPT1OSC  = ON        // Opera em modo de baixo consumo.
 
-
 #define BOOL int
 #define true 1
 #define false 0
 #define escrita 0xFE
-#define leitura 0x00;
+#define leitura 0x00
+#define auxTam 10
 
 /** V A R I Á V E I S ********************************************************/
 #pragma udata
-char aux[64];
-unsigned char programa[5] = {'0', '1', '1' , '0', '\0'};
+
+char aux[74];
 unsigned int quant_interrupt = 0;
 unsigned char segundo = 0;
-unsigned int contadorINT1 = 0;
-unsigned int contadorINT2 = 0;
+int inteiro;
+char recebido[74];
+char programa[auxTam];
+char ultimoPrograma[auxTam];
+unsigned char endereco = 0;
+unsigned char parametro1[4];
+unsigned char parametro2[4];
+char resultado[4];
+unsigned int resultadoPOS = 0;
+unsigned int isMaster = true;
+
 
 /** P R O T Ó T I P O S  D E  F U N Ç Õ E S  *********************************/
 //void USBDeviceTasks(void);
@@ -61,20 +69,21 @@ void LowPriorityISRCode();
 void USBCBSendResume(void);
 
 //** F U N Ç Õ E S ***********************************************************/
-BOOL escreve_I2C(unsigned char mensagem[], int tamanho, unsigned char endereco){
+BOOL escreve_I2C(unsigned char mensagem[], int tamanho, unsigned char endereco)
+{
     IdleI2C();                          // Aguarda pelo Barramento.
     StartI2C();                         // Solicita o inÌcio da comunicaÁ„o.
     while(SSPCON2bits.SEN);             // Aguarda a resoluÁ„o do Start.
     IdleI2C();
 
     if(WriteI2C(endereco & escrita))    // Envia endereÁo e Write
-        return false;                   // Retorna como sucesso.
+        return 0;                       // Retorna como sucesso.
 
     IdleI2C();
     tamanho--;
     while(tamanho >= 0){
         if(WriteI2C(mensagem[tamanho--]))
-            return false;
+            return 0;
         IdleI2C();
     }
     StopI2C();
@@ -97,7 +106,6 @@ unsigned char ler_I2C(unsigned char endereco){
 
     return dado;
 }
-
 
 
 /** I N T E R R U P Ç Õ E S *************************************************/
@@ -142,25 +150,19 @@ void Low_ISR (void)
 void HighPriorityISRCode()
 {
     USBDeviceTasks(); // Obrigatório! Qual a com. ativa com o computador.
-    if(INTCON3bits.INT1IF){
-        contadorINT1++;
-        LATA = LATA ^= (1<<5); // Muda o estado do LED 7.
-        memset(aux, '\0', 64);
-        CDCTxService();
-        sprintf(aux, "#|Interrupt1 - %d\n", contadorINT1);
-        putUSBUSART(aux, strlen(aux));
-        CDCTxService();
-        INTCON3bits.INT1IF = 0;
-    }
-    if(INTCON3bits.INT2IF){
-        contadorINT2++;
-        LATC = LATC ^= 1; // Muda o estado do LED 14.
-        memset(aux, '\0', 64);
-        CDCTxService();
-        sprintf(aux, "#|Interrupt2 - %d\n", contadorINT2);
-        putUSBUSART(aux, strlen(aux));
-        CDCTxService();
-        INTCON3bits.INT2IF = 0; // Limpa o flag bit da interrupção INT2.
+    if(PIR1bits.SSPIF)
+    {
+        unsigned char aux;
+        aux = SSPSTAT & 0x2D;
+        if((aux ^ 0x29) == 0x00) // Se for leitura...
+        {
+            if(resultadoPOS > 3) resultadoPOS = 0;
+            resultado[resultadoPOS] = ReadI2C();
+            AckI2C();
+            resultadoPOS++;
+        }
+        PIR1bits.SSPIF = 0;     // Zera o Flag de interrupção I2C
+        isMaster = true;        // Finaliza voltando a ser MASTER
     }
 }
 #pragma interruptlow LowPriorityISRCode
@@ -169,70 +171,53 @@ void LowPriorityISRCode()
     quant_interrupt++;
     if(quant_interrupt == 201){
         segundo++;
-        LATD = LATD ^ (1<<3); // Muda o estado do LED 22.
-        if(segundo >= 5){
-            LATD = LATD ^ (1<<2); // Muda o estado do LED 21.
-            segundo = 0;
-            memset(aux, '\0', 64);
-            CDCTxService();
-            sprintf(aux, "%d|%d|%s\n", contadorINT1, contadorINT2, programa);
-            putUSBUSART(aux, strlen(aux));
-            CDCTxService();
-            contadorINT1 = 0;
-            contadorINT2 = 0;
-        }
+        LATD = LATD ^ (1<<3);   // Muda o estado do LED 22.
+//        LATD = LATD ^ (1<<2);   // Muda o estado do LED 21.
+        if(segundo == 30) segundo = 0;
         quant_interrupt = 0;
     }
     PIR1bits.TMR2IF = 0;
 }
 #pragma code
 
+
 void main(void)
 {
-    char recebido[64];
-    int inteiro;
-    TRISAbits.TRISA5 = 0;   // define saida na porta fisica 7
-    LATAbits.LATA5 = 1;     // Define nível
-    TRISCbits.TRISC0 = 0;   // define saida na porta fisica 14
-    LATCbits.LATC0 = 1;     // Define nível
-    TRISDbits.TRISD3 = 0;   // Define saida na porta fisica 22 - RD3
-    LATDbits.LATD3 = 0;     // Define nível lógico 0
-    TRISDbits.TRISD2 = 0;   // Define saida na porta fisica 21
-    LATDbits.LATD2 = 1;     // Define nível
 
-    TRISAbits.TRISA0 = 0;   // Define porta A0 como saída.
-    TRISAbits.TRISA1 = 0;   // Define porta A1 como saída.
-    TRISAbits.TRISA2 = 0;   // Define porta A2 como saída.
-    TRISAbits.TRISA3 = 0;   // Define porta A3 como saída.
-    LATAbits.LATA0 = 0;     // Define nível lógico 0.
-    LATAbits.LATA1 = 0;     // Define nível lógico 0.
-    LATAbits.LATA2 = 0;     // Define nível lógico 0.
-    LATAbits.LATA3 = 0;     // Define nível lógico 0.
+    TRISAbits.TRISA5 = 0;       // define saida na porta fisica 7 - LED
+    LATAbits.LATA5   = 1;       // Define nível
+    TRISCbits.TRISC0 = 0;       // define saida na porta fisica 14 - LED
+    LATCbits.LATC0   = 1;       // Define nível
+    TRISDbits.TRISD2 = 0;       // Define saida na porta fisica 21 - LED PLACA
+    LATDbits.LATD2   = 1;       // Define nível
+    TRISDbits.TRISD3 = 0;       // Define saida na porta fisica 22 - LED PLACA
+    LATDbits.LATD3   = 0;       // Define nível lógico 0
 
-    ADCON1 |= 0x0F;         // Default all pins to digital
+    TRISAbits.TRISA0 = 0;       // Define porta A0 como saída.
+    TRISAbits.TRISA1 = 0;       // Define porta A1 como saída.
+    TRISAbits.TRISA2 = 0;       // Define porta A2 como saída.
+    TRISAbits.TRISA3 = 0;       // Define porta A3 como saída.
+    LATAbits.LATA0   = 0;       // Define nível lógico 0.
+    LATAbits.LATA1   = 0;       // Define nível lógico 0.
+    LATAbits.LATA2   = 0;       // Define nível lógico 0.
+    LATAbits.LATA3   = 0;       // Define nível lógico 0.
 
-    TRISC = 0x01;       // Define SCL como saída e SDA como entrada. (I2C)
-
-    /* CONFIGURAÇÕES I2C */
-    OpenI2C(MASTER,     // Define como Master
-            SLEW_OFF,); // Define como 100KHz ou 1MHz.
-    SSPADD = 49;        // (50 - 1).
-
+    ADCON1 |= 0x0F;             // Default all pins to digital
 
     USBDeviceInit();
 
     // TIMER2
     PR2 = 249;
 
-    OpenTimer2(TIMER_INT_OFF   // Desabilita a interrupção TIMER2.
-               &T2_POST_1_15   // Postscaler igual a 10 (1:10).
-               &T2_PS_1_16);   // Prescaler igual a 16 (1:16).
+    OpenTimer2(TIMER_INT_OFF    // Desabilita a interrupção TIMER2.
+               &T2_POST_1_15    // Postscaler igual a 10 (1:10).
+               &T2_PS_1_16);    // Prescaler igual a 16 (1:16).
 
     PIR1bits.TMR2IF = 0;        // Limpa o flag bit da interrupção TIMER2.
     IPR1bits.TMR2IP = 0;        // Seleciona baixa prioridade.
     PIE1bits.TMR2IE = 1;        // Habilita a interrupção de TIMER2.
 
-    RCONbits.IPEN = 1;          // Habilita interrupção com prioridade: (0=Alto e 1=baixo)
+    RCONbits.IPEN   = 1;        // Habilita interrupção com prioridade: (0=Alto e 1=baixo)
     INTCONbits.GIEH = 1;        // Habilita todas as interrupções de alta prioridade.
     INTCONbits.GIEL = 1;        // Habilita todas as interrupções de baixa prioridade.
 
@@ -244,55 +229,130 @@ void main(void)
     CloseADC();
 
     //-- Interrupt 1 - pino 34
-    TRISBbits.RB1 = 1;      // Define o pino RB2 como entrada.
+    TRISBbits.RB1 = 1;          // Define o pino RB2 como entrada.
 
     INTCON2bits.INTEDG1 = 0;    // Interrupção na borda de subida.
-    INTCON3bits.INT1IF = 0;     // Limpa o flag bit da interrupção INT1.
-    INTCON3bits.INT1IP = 1;     // Alta prioridade.
-    INTCON3bits.INT1IE = 1;     // Ativa a interrupção externa INT1 (RB1).
+    INTCON3bits.INT1IF  = 0;    // Limpa o flag bit da interrupção INT1.
+    INTCON3bits.INT1IP  = 1;    // Alta prioridade.
+    INTCON3bits.INT1IE  = 1;    // Ativa a interrupção externa INT1 (RB1).
 
     //-- Interrupt 2 - pino 35
     TRISBbits.RB2 = 1;          // Define o pino RB2 como entrada.
 
     INTCON2bits.INTEDG2 = 0;    // Interrupção na borda de subida.
-    INTCON3bits.INT2IF = 0;     // Limpa o flag bit da interrupção INT2.
-    INTCON3bits.INT2IP = 1;     // Alta prioridade.
-    INTCON3bits.INT2IE = 1;     // Ativa a interrupção externa INT2 (RB2).
+    INTCON3bits.INT2IF  = 0;    // Limpa o flag bit da interrupção INT2.
+    INTCON3bits.INT2IP  = 1;    // Alta prioridade.
+    INTCON3bits.INT2IE  = 1;    // Ativa a interrupção externa INT2 (RB2).
 
     //-- Interrupt Geral
-    INTCON2bits.RBPU = 1;       //All PORTB pullups disabled
+    INTCON2bits.RBPU = 1;       // All PORTB pullups disabled
     RCONbits.IPEN = 1;          // Habilita interrupção com nível de prioridade.
     INTCONbits.GIEH = 1;        // Habilita todas as interrupções de alta prioridade
     INTCONbits.GIEL = 1;        // Habilita todas as interrupções de baixa prioridade
 
-    memset(recebido, '\0', 64);
     while(1)
     {
-        ClrWdt();
+        //-- MODO MASTER -------------------------------------------------------
+        LATD = LATDbits.LATD2 = 1; // Liga o LED 21.
 
-        if(USB_BUS_SENSE && (USBGetDeviceState() == DETACHED_STATE)) // Se estiver desconectado...
-            USBDeviceAttach(); // Conecta.
+        // CONFIG I2C
+        TRISC = 0x01;           // Define SCL como saída e SDA como entrada.
+        OpenI2C(MASTER,         // Define como Master
+                SLEW_OFF);      // Define como 100KHz ou 1MHz.
+        SSPADD = 49;            // (50 - 1). BaudRate?
+//        RCONbits.IPEN = 0;      // Interrupção I2C Desativada.
+        SSPCON2bits.GCEN = 0;   // Desativa mensagens de broadcast
+        
 
-
-        if(!((USBDeviceState < CONFIGURED_STATE)||(USBSuspendControl==1))) // Se
+        while(isMaster)
         {
-            if(USBUSARTIsTxTrfReady()) // Verifica se o módulo pode transmitir.
+            ClrWdt(); // Reseta contador do WatchDogTimer
+
+            if(USB_BUS_SENSE && (USBGetDeviceState() == DETACHED_STATE)) // Se estiver desconectado...
+                USBDeviceAttach(); // Conecta.
+
+
+            // ENVIAR PELA USB
+            if(!((USBDeviceState < CONFIGURED_STATE)||(USBSuspendControl==1)))
             {
-                inteiro = getsUSBUSART(recebido,64);
-                if(inteiro != 0) // Se tem algo para enviar, envia.
+                if(USBUSARTIsTxTrfReady())                          // Verifica se o módulo pode transmitir.
                 {
-//                    programa = recebido;
-                    strncpy(programa, recebido, 4);
-                    memset(aux, '\0', 64);
-                    CDCTxService();
-                    sprintf(aux, "#|%s\n", recebido);
-                    memset(recebido, '\0', 64);
-                    putUSBUSART(aux, strlen(aux));
+                    inteiro = getsUSBUSART(recebido, auxTam);       // Recebe o comando por USB.
+                    strncpy(programa, recebido, 9);                  // Copia somente 4 posições do recebido USB.
+                    if(inteiro != 0){                               // Se tiver novo dado, avisa no console.
+                        CDCTxService();
+                        memset(aux, '\0', strlen(aux));
+                        sprintf(aux, "#Recebido: %s\n", programa);
+//                        aux[auxTam+11] = '\0';
+                        putUSBUSART(aux, strlen(aux));              // Escreve na USB
+                        strcpy(ultimoPrograma, programa);           // Faz uma cópia do programa em execução.
+                    }
+                    
+
+
+                    if(((int)programa & 0x01) == 1){                // Se tiver algum cálculo para fazer...
+
+                        endereco      = programa[0];                // Separa o primeiro char em byte de endereço
+
+                        parametro1[0] = programa[1];                // Separa o primeiro byte do parametro1
+                        parametro1[1] = programa[2];                // Separa o segundo byte do parametro1
+                        parametro1[2] = programa[3];                // Separa o terceiro byte do parametro1
+                        parametro1[3] = programa[4];                // Separa o quarto byte do parametro1
+
+                        parametro1[0] = programa[5];                // Separa o primeiro byte do parametro2
+                        parametro1[1] = programa[6];                // Separa o segundo byte do parametro2
+                        parametro1[2] = programa[7];                // Separa o terceiro byte do parametro2
+                        parametro1[3] = programa[8];                // Separa o quarto byte do parametro2
+
+                        CDCTxService();
+                        memset(aux, '\0', auxTam);
+                        sprintf(aux, "#Enviando param1: %s\n", parametro1);
+                        putUSBUSART(aux, strlen(aux));              // Escreve na USB
+                        escreve_I2C(parametro1, 4, endereco);       // Envia o primeiro parâmetro
+                        memset(parametro1, '\0', 4);
+
+                        CDCTxService();
+                        memset(aux, '\0', auxTam);
+                        sprintf(aux, "#Enviando param2: %s\n", parametro2);
+                        putUSBUSART(aux, strlen(aux));              // Escreve na USB
+                        escreve_I2C(parametro2, 4, endereco);       // Envia o primeiro byte
+                        memset(parametro2, '\0', 4);
+                        
+                        isMaster = false;                           // Vira SLAVE e aguarda o resultado.
+                    }
                 }
+                CDCTxService(); //
             }
-            CDCTxService(); //
-        }
         Delay10KTCYx(50);
+        }
+
+        CDCTxService();
+        memset(aux, '\0', auxTam);
+        sprintf(aux, "#MODO SLAVE!\n");
+        putUSBUSART(aux, strlen(aux));              // Escreve na USB
+
+        //-- MODO SLAVE --------------------------------------------------------
+        LATD = LATDbits.LATD2 = 0;  // Desliga o LED 21.
+
+        // CONFIG I2C SLAVE
+        TRISC = 0x03;           // Define SCL e SDA como entrada.
+        RCONbits.IPEN = 1;      // Habilita Interrupções I2C
+        SSPCON2bits.GCEN = 0;   // Desativa mensagens de broadcast
+        INTCON |= 0xC0;
+        PIE1 |= 0x08;
+        IPR1 |= 0x08;
+
+        OpenI2C(SLAVE_7,
+                SLEW_OFF);
+        SSPADD = 0xFF;          // Endereço I2C
+
+        ClrWdt();               // Reseta contador WTD
+        while(!isMaster)        // Aguarda interrupção I2C ou reset do WTD
+        {
+            CDCTxService();
+            Delay10KTCYx(500);
+        }
+
     }
 }
 
@@ -634,3 +694,19 @@ BOOL USER_USB_CALLBACK_EVENT_HANDLER(USB_EVENT event, void *pdata, WORD size)
 
 /** EOF main.c *************************************************/
 
+/* TEMP CODES
+
+
+LATD = LATD ^ (1<<2); // Muda o estado do LED 21.
+putUSBUSART(aux, strlen(aux));  // Escreve na USB
+
+if(inteiro != 0) // Se tem algo para enviar e tiver algum programa.
+                {
+                    CDCTxService();
+                    putUSBUSART(resultado, strlen(resultado));  // Escreve na USB
+                    memset(resultado, 0, strlen(resultado));    // Reseta valor de resultado
+                }
+
+
+
+ */

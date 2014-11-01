@@ -4,7 +4,7 @@
   <defaultConf>0</defaultConf>
   <confs>
     <conf name="PICDEM_FSUSB" type="2">
-      <platformToolSN>:=MPLABComm-USB-Microchip:=&lt;vid>04D8:=&lt;pid>900A:=&lt;rev>0002:=&lt;man>Microchip Technology Inc.:=&lt;prod>PICkit 3:=&lt;sn>DEFAULT_PK3 :=&lt;drv>x:=end</platformToolSN>
+      <platformToolSN></platformToolSN>
       <languageToolchainDir>/Applications/microchip/mplabc18/v3.46/bin</languageToolchainDir>
       <mdbdebugger version="1">
         <placeholder1>place holder 1</placeholder1>
