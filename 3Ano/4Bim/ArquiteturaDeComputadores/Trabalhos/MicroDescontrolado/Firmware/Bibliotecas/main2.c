@@ -60,6 +60,7 @@ unsigned char parametro2[4];
 char resultado[4];
 unsigned int resultadoPOS = 0;
 unsigned int isMaster = true;
+char dado = 0;
 
 
 /** P R O T Ó T I P O S  D E  F U N Ç Õ E S  *********************************/
@@ -172,7 +173,6 @@ void LowPriorityISRCode()
     if(quant_interrupt == 201){
         segundo++;
         LATD = LATD ^ (1<<3);   // Muda o estado do LED 22.
-//        LATD = LATD ^ (1<<2);   // Muda o estado do LED 21.
         if(segundo == 30) segundo = 0;
         quant_interrupt = 0;
     }
@@ -229,12 +229,12 @@ void main(void)
     CloseADC();
 
     //-- Interrupt 1 - pino 34
-    TRISBbits.RB1 = 1;          // Define o pino RB2 como entrada.
-
-    INTCON2bits.INTEDG1 = 0;    // Interrupção na borda de subida.
-    INTCON3bits.INT1IF  = 0;    // Limpa o flag bit da interrupção INT1.
-    INTCON3bits.INT1IP  = 1;    // Alta prioridade.
-    INTCON3bits.INT1IE  = 1;    // Ativa a interrupção externa INT1 (RB1).
+//    TRISBbits.RB1 = 1;          // Define o pino RB2 como entrada.
+//
+//    INTCON2bits.INTEDG1 = 0;    // Interrupção na borda de subida.
+//    INTCON3bits.INT1IF  = 0;    // Limpa o flag bit da interrupção INT1.
+//    INTCON3bits.INT1IP  = 1;    // Alta prioridade.
+//    INTCON3bits.INT1IE  = 1;    // Ativa a interrupção externa INT1 (RB1).
 
     //-- Interrupt 2 - pino 35
     TRISBbits.RB2 = 1;          // Define o pino RB2 como entrada.
@@ -253,10 +253,13 @@ void main(void)
     while(1)
     {
         //-- MODO MASTER -------------------------------------------------------
-        LATD = LATDbits.LATD2 = 1; // Liga o LED 21.
+//        LATD = LATDbits.LATD2 = 1; // Liga o LED 21.
+        LATD = LATD |= (1<<2);  // Liga o LED 21.
 
         // CONFIG I2C
-        TRISC = 0x01;           // Define SCL como saída e SDA como entrada.
+//        TRISC = 0x01;           // Define SCL como saída e SDA como entrada.
+        TRISCbits.TRISC0 = 1;   // Define SCL como saída   - pino 34
+        TRISCbits.TRISC1 = 0;   // Define SDA como entrada - pino 33
         OpenI2C(MASTER,         // Define como Master
                 SLEW_OFF);      // Define como 100KHz ou 1MHz.
         SSPADD = 49;            // (50 - 1). BaudRate?
@@ -278,17 +281,26 @@ void main(void)
                 if(USBUSARTIsTxTrfReady())                          // Verifica se o módulo pode transmitir.
                 {
                     inteiro = getsUSBUSART(recebido, auxTam);       // Recebe o comando por USB.
-                    strncpy(programa, recebido, 9);                  // Copia somente 4 posições do recebido USB.
+                    strncpy(programa, recebido, 9);                 // Copia somente 4 posições do recebido USB.
                     if(inteiro != 0){                               // Se tiver novo dado, avisa no console.
                         CDCTxService();
                         memset(aux, '\0', strlen(aux));
                         sprintf(aux, "#Recebido: %s\n", programa);
-//                        aux[auxTam+11] = '\0';
                         putUSBUSART(aux, strlen(aux));              // Escreve na USB
                         strcpy(ultimoPrograma, programa);           // Faz uma cópia do programa em execução.
                     }
                     
+                    if(programa[0] == 'A'){                         // Teste I2C
+                        memset(aux, '\0', auxTam);
+                        sprintf(aux, "#Write I2C: %c\n", programa[1]);
+                        putUSBUSART(aux, strlen(aux));              // Escreve na USB
+                    }
 
+                    if(programa[0] == 'B'){                         // Teste I2C
+                        memset(aux, '\0', auxTam);
+                        sprintf(aux, "#Read I2C: %c\n", programa[1]);
+                        putUSBUSART(aux, strlen(aux));              // Escreve na USB
+                    }
 
                     if(((int)programa & 0x01) == 1){                // Se tiver algum cálculo para fazer...
 
@@ -332,10 +344,13 @@ void main(void)
         putUSBUSART(aux, strlen(aux));              // Escreve na USB
 
         //-- MODO SLAVE --------------------------------------------------------
-        LATD = LATDbits.LATD2 = 0;  // Desliga o LED 21.
+//        LATD = LATDbits.LATD2 = 0;  // Desliga o LED 21.
+        LATD = LATD &= ~(1<<2);  // Desliga o LED 21.
 
         // CONFIG I2C SLAVE
-        TRISC = 0x03;           // Define SCL e SDA como entrada.
+//        TRISC = 0x03;           // Define SCL e SDA como entrada.
+        TRISCbits.TRISC0 = 1;   // Define SCL como entrada - pino 34
+        TRISCbits.TRISC1 = 1;   // Define SDA como entrada - pino 33
         RCONbits.IPEN = 1;      // Habilita Interrupções I2C
         SSPCON2bits.GCEN = 0;   // Desativa mensagens de broadcast
         INTCON |= 0xC0;
@@ -707,6 +722,13 @@ if(inteiro != 0) // Se tem algo para enviar e tiver algum programa.
                     memset(resultado, 0, strlen(resultado));    // Reseta valor de resultado
                 }
 
+ *
+ * escreve_I2C(programa[1], 1, programa[0]);
+
+                        dado = ler_I2C(programa[0]);
+                        memset(aux, '\0', auxTam);
+                        sprintf(aux, "#ler I2C: %c\n", programa[1]);
+                        putUSBUSART(dado, strlen(dado));              // Escreve na USB
 
 
  */
