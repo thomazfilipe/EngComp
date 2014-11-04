@@ -311,10 +311,10 @@ void main(void)
                         parametro1[2] = programa[3];                // Separa o terceiro byte do parametro1
                         parametro1[3] = programa[4];                // Separa o quarto byte do parametro1
 
-                        parametro1[0] = programa[5];                // Separa o primeiro byte do parametro2
-                        parametro1[1] = programa[6];                // Separa o segundo byte do parametro2
-                        parametro1[2] = programa[7];                // Separa o terceiro byte do parametro2
-                        parametro1[3] = programa[8];                // Separa o quarto byte do parametro2
+                        parametro2[0] = programa[5];                // Separa o primeiro byte do parametro2
+                        parametro2[1] = programa[6];                // Separa o segundo byte do parametro2
+                        parametro2[2] = programa[7];                // Separa o terceiro byte do parametro2
+                        parametro2[3] = programa[8];                // Separa o quarto byte do parametro2
 
                         CDCTxService();
                         memset(aux, '\0', auxTam);
