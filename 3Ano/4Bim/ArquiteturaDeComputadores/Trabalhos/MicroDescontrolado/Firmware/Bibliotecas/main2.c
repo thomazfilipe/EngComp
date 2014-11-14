@@ -27,7 +27,7 @@
 #pragma config USBDIV   = 2         // Clock source from 96MHz PLL/2
 #pragma config FOSC     = HSPLL_HS  // Gera os 48MHz
 #pragma config WDT      = ON        // Watchdog Timer
-#pragma config WDTPS    = 32768     // Período do WDT em 512ms
+#pragma config WDTPS    = 512     // Período do WDT em 512ms
 #pragma config BOR      = ON
 #pragma config BORV     = 3         // Reseta se a tensão for menor que 3v.
 #pragma config VREGEN   = ON        //USB Voltage Regulator
@@ -43,6 +43,7 @@
 #define escrita 0xFE
 #define leitura 0x00
 #define auxTam 10
+#define maxTam 74
 
 /** V A R I Á V E I S ********************************************************/
 #pragma udata
@@ -151,7 +152,7 @@ void Low_ISR (void)
 void HighPriorityISRCode()
 {
     USBDeviceTasks(); // Obrigatório! Qual a com. ativa com o computador.
-    if(PIR1bits.SSPIF)
+    if(PIR1bits.SSPIF)  // Se tiver uma iterrupção I2C...
     {
         unsigned char aux;
         aux = SSPSTAT & 0x2D;
@@ -280,62 +281,74 @@ void main(void)
             {
                 if(USBUSARTIsTxTrfReady())                          // Verifica se o módulo pode transmitir.
                 {
+                    memset(recebido, '\0', maxTam);                     // Reseta string recebido.
+                    memset(programa, '\0', auxTam);
                     inteiro = getsUSBUSART(recebido, auxTam);       // Recebe o comando por USB.
-                    strncpy(programa, recebido, 9);                 // Copia somente 4 posições do recebido USB.
-                    if(inteiro != 0){                               // Se tiver novo dado, avisa no console.
-                        CDCTxService();
-                        memset(aux, '\0', strlen(aux));
-                        sprintf(aux, "#Recebido: %s\n", programa);
-                        putUSBUSART(aux, strlen(aux));              // Escreve na USB
-                        strcpy(ultimoPrograma, programa);           // Faz uma cópia do programa em execução.
-                    }
                     
-                    if(programa[0] == 'A'){                         // Teste I2C
-                        memset(aux, '\0', auxTam);
-                        sprintf(aux, "#Write I2C: %c\n", programa[1]);
-                        putUSBUSART(aux, strlen(aux));              // Escreve na USB
-                    }
-
-                    if(programa[0] == 'B'){                         // Teste I2C
-                        memset(aux, '\0', auxTam);
-                        sprintf(aux, "#Read I2C: %c\n", programa[1]);
-                        putUSBUSART(aux, strlen(aux));              // Escreve na USB
-                    }
-
-                    if(((int)programa & 0x01) == 1){                // Se tiver algum cálculo para fazer...
-
-                        endereco      = programa[0];                // Separa o primeiro char em byte de endereço
-
-                        parametro1[0] = programa[1];                // Separa o primeiro byte do parametro1
-                        parametro1[1] = programa[2];                // Separa o segundo byte do parametro1
-                        parametro1[2] = programa[3];                // Separa o terceiro byte do parametro1
-                        parametro1[3] = programa[4];                // Separa o quarto byte do parametro1
-
-                        parametro2[0] = programa[5];                // Separa o primeiro byte do parametro2
-                        parametro2[1] = programa[6];                // Separa o segundo byte do parametro2
-                        parametro2[2] = programa[7];                // Separa o terceiro byte do parametro2
-                        parametro2[3] = programa[8];                // Separa o quarto byte do parametro2
-
+                    if(inteiro != 0){                               // Se tiver novo dado, avisa no console.
+                        inteiro = 0;
                         CDCTxService();
-                        memset(aux, '\0', auxTam);
-                        sprintf(aux, "#Enviando param1: %s\n", parametro1);
-                        putUSBUSART(aux, strlen(aux));              // Escreve na USB
-                        escreve_I2C(parametro1, 4, endereco);       // Envia o primeiro parâmetro
-                        memset(parametro1, '\0', 4);
+                        strncpy(programa, recebido, 9);                 // Copia somente 9 posições do recebido USB.
+                        memset(ultimoPrograma, '\0', auxTam);
 
-                        CDCTxService();
-                        memset(aux, '\0', auxTam);
-                        sprintf(aux, "#Enviando param2: %s\n", parametro2);
-                        putUSBUSART(aux, strlen(aux));              // Escreve na USB
-                        escreve_I2C(parametro2, 4, endereco);       // Envia o primeiro byte
-                        memset(parametro2, '\0', 4);
-                        
-                        isMaster = false;                           // Vira SLAVE e aguarda o resultado.
+                        memset(aux, '\0', maxTam);
+                        sprintf(aux, "#Recebido: %s\n", programa);
+                        putUSBUSART(aux, strlen(aux));                  // Escreve na USB
+                        strncpy(ultimoPrograma, programa, 9);           // Faz uma cópia do programa em execução.
+                        memset(programa, '\0', auxTam);
+
+                        if(ultimoPrograma[0] == 'C'){                         // Teste I2C
+                            memset(aux, '\0', maxTam);
+                            sprintf(aux, "#Write to address: %c\n", ultimoPrograma[1]);
+                            putUSBUSART(aux, strlen(aux));              // Escreve na USB
+                        }
+
+                        if(ultimoPrograma[0] == 'D'){                         // Teste I2C
+                            memset(aux, '\0', maxTam);
+                            sprintf(aux, "#Read from address: %c\n", ultimoPrograma[1]);
+                            putUSBUSART(aux, strlen(aux));              // Escreve na USB
+                        }
+
+                        if(ultimoPrograma[0] == 'A'){                   // Se tiver algum cálculo para fazer...
+
+                            endereco      = ultimoPrograma[0];                // Separa o primeiro char em byte de endereço
+
+                            parametro1[0] = ultimoPrograma[1];                // Separa o primeiro byte do parametro1
+                            parametro1[1] = ultimoPrograma[2];                // Separa o segundo byte do parametro1
+                            parametro1[2] = ultimoPrograma[3];                // Separa o terceiro byte do parametro1
+                            parametro1[3] = ultimoPrograma[4];                // Separa o quarto byte do parametro1
+
+                            parametro2[0] = ultimoPrograma[5];                // Separa o primeiro byte do parametro2
+                            parametro2[1] = ultimoPrograma[6];                // Separa o segundo byte do parametro2
+                            parametro2[2] = ultimoPrograma[7];                // Separa o terceiro byte do parametro2
+                            parametro2[3] = ultimoPrograma[8];                // Separa o quarto byte do parametro2
+
+                            CDCTxService();
+                            memset(aux, '\0', auxTam);
+                            sprintf(aux, "#Endereço: %c\n", endereco);
+                            putUSBUSART(aux, strlen(aux));              // Escreve na USB
+
+                            CDCTxService();
+                            memset(aux, '\0', auxTam);
+                            sprintf(aux, "#Enviando param1: %c%c%c%c\n", parametro1[0], parametro1[1], parametro1[2], parametro1[3]);
+                            putUSBUSART(aux, strlen(aux));              // Escreve na USB
+//                            escreve_I2C(parametro1, 4, endereco);       // Envia o primeiro parâmetro
+//                            memset(parametro1, '\0', 4);
+//
+                            CDCTxService();
+                            memset(aux, '\0', auxTam);
+                            sprintf(aux, "#Enviando param2: %c%c%c%c\n", parametro2[0], parametro2[1], parametro2[2], parametro2[3]);
+                            putUSBUSART(aux, strlen(aux));              // Escreve na USB
+//                            escreve_I2C(parametro2, 4, endereco);       // Envia o primeiro byte
+//                            memset(parametro2, '\0', 4);
+
+                            isMaster = false;                           // Vira SLAVE e aguarda o resultado.
+                        }
                     }
                 }
                 CDCTxService(); //
             }
-        Delay10KTCYx(50);
+            Delay10KTCYx(50);
         }
 
         CDCTxService();
